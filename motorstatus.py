@@ -84,44 +84,22 @@ class MotorStatusGrid(QWidget):
 		self.axis = Axis(axis_num)
 		self.setLayout(QGridLayout())
 
-class MotorStatus(QWidget):
+class AxisSelector(QWidget):
 	def setTargetAxis(self, n):
 		self.jump_to_motor.setText(str(n))
-		
 	def targetAxis(self):
 		return int(self.jump_to_motor.text())
-	def updateCurrentPage(self):
-		self.motorgrid.axis.set_axis_num(self.targetAxis())
-		
-	def doShowPage(self):
-		self.motorgrid.readMotor()
-	def __init__(self, axis_num=1, parent=None):
-		super().__init__(parent)
-		self.setLayout(QVBoxLayout())
-		self.motorgrid = MotorStatusGrid(axis_num)
-		self.layout().addWidget(self.motorgrid)
-		control_row = self.makeControlRow()
-		self.layout().addLayout(control_row)
-
-		self.setPage(axis_num)
-
-		self.timer = QTimer(self)
-		self.timer.timeout.connect(self.doShowPage)
-		self.timer.setInterval(1500)
-		self.timer.start()
-		
-
-	def setPage(self, n):
+	def updateAxis(self):
+		self.axis.set_axis_num(self.targetAxis())
+	def setAxis(self, n):
 		self.setTargetAxis(n)
-		self.updateCurrentPage()
-		
+		self.updateAxis()
+
 
 	def incrPage(self, n):
-		#current_page = int(self.jump_to_motor.text())
-		current_page = self.motorgrid.axis.axis_num
+		current_page = self.axis.axis_num
 		next_page = current_page + n
-		self.setPage(next_page)
-		#self.doShowPage()
+		self.setAxis(next_page)
 
 	def nextPage(self):
 		self.incrPage(1)
@@ -132,7 +110,7 @@ class MotorStatus(QWidget):
 	def makeControlRow(self):
 		layout = QHBoxLayout()
 		jump_to_motor = QLineEdit()
-		jump_to_motor.returnPressed.connect(self.updateCurrentPage)
+		jump_to_motor.returnPressed.connect(self.updateAxis)
 		self.jump_to_motor = jump_to_motor
 		layout.addWidget(jump_to_motor)
 		next_button = QPushButton(">")
@@ -142,6 +120,36 @@ class MotorStatus(QWidget):
 		layout.addWidget(prev_button)
 		layout.addWidget(next_button)
 		return layout
+
+	def __init__(self, axis, parent=None):
+		super().__init__(parent)
+		self.axis = axis
+		self.setLayout(self.makeControlRow())
+
+class MotorStatus(QWidget):
+
+		
+	def doShowPage(self):
+		self.motorgrid.readMotor()
+	def __init__(self, axis_num=1, parent=None):
+		super().__init__(parent)
+		self.setLayout(QVBoxLayout())
+		self.motorgrid = MotorStatusGrid(axis_num)
+		self.layout().addWidget(self.motorgrid)
+		control_row = AxisSelector(self.motorgrid.axis)
+		self.layout().addWidget(control_row)
+
+		control_row.setAxis(axis_num)
+
+		self.timer = QTimer(self)
+		self.timer.timeout.connect(self.doShowPage)
+		self.timer.setInterval(1500)
+		self.timer.start()
+		
+
+		
+
+
 
 
 if __name__ == "__main__":

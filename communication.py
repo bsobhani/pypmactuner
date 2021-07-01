@@ -26,23 +26,51 @@ class AsynRecord:
 		response = self.recv_pv.get()
 		return response
 
-	def send_recv(self, msg):
+	def wait_for_timeout(self, timeout):
+		time_elapsed = 0
+		time_start = time.time()
+		while self.waiting_for_mine:
+			time.sleep(.001)
+			time_elapsed = time.time() - time_start
+			if time_elapsed > timeout:
+				raise TimeoutError
+
+	def send_recv(self, msg, timeout=10):
 		AsynRecord.mutex.acquire()
 		self.waiting_for_mine = True
 		#self.send(msg)
 		self.send_pv.put(msg)
-		while self.waiting_for_mine:
-			time.sleep(.001)
+
+		self.wait_for_timeout(timeout)
+		
 		#return self.recv()
 		val = self.recv_value
 		#val = caget(self.recv_pv_name)
 		AsynRecord.mutex.release()
 		return val
 
+	def set_ifmt(self, ifmt):
+		pv = self.pv_name + ".IFMT"
+		caput(pv, ifmt)
+
+	def get_ifmt(self):
+		pv = self.pv_name + ".IFMT"
+		return caget(pv)
+		
+
+def compute_cs_string(cs):
+	try:
+		cs = int(cs)
+		cs_string = "&" + str(cs) + " "
+	except:
+		cs_string = ""
+	return cs_string
 
 class Controller:
 	def __init__(self):
-		self.connection = AsynRecord("XF:21IDD-CT{MC:PRV}Asyn")
+		#self.connection = AsynRecord("XF:21IDD-CT{MC:PRV}Asyn")
+		#self.connection = AsynRecord("XF:11IDB-CT{MC:11}Asyn")
+		self.connection = AsynRecord("XF:10IDC-CT{MC:7}Asyn")
 	
 	def get_ivar(self, ivar):
 		response = self.connection.send_recv("i"+str(ivar)+"\r")
@@ -69,6 +97,50 @@ class Controller:
 	def in_position(self, axis_num):
 		status = self.get_status(axis_num)
 		return status%2==1
+
+	def list_cmd(self, prog, cs=None):
+		return self.list_cmd_method1(prog, cs)
+
+	def list_cmd_method1(self, prog, cs):
+		cs_string = compute_cs_string(cs)
+		cmd = "list {}".format(prog)
+		cmd = cs_string + cmd
+		asynrecord = self.connection
+		orig_ifmt = asynrecord.get_ifmt()
+		asynrecord.set_ifmt("Binary")
+		try:
+			r = asynrecord.send_recv(cmd+" "+cmd, timeout = 6)
+		except TimeoutError:
+			r = caget(asynrecord.pv_name+".BINP")
+			AsynRecord.mutex.release()
+		asynrecord.set_ifmt(orig_ifmt)
+		r = [chr(c) for c in r]
+		r = ["\n" if c=="\r" else c for c in r]
+		r = r[:-2]
+		r = "".join(r)
+		r = r[r.find("\n"):]
+		return r
+
+	def list_cmd_method2(self, prog, cs=None):
+		cs_string = compute_cs_string(cs)
+		cmd = "list {prog},{word},1"
+		cmd = cs_string + cmd
+		print(cmd)
+		index = 1
+		words = []
+		while True:
+			cmd_i = cmd.format(prog=prog, word=index)
+			word = self.connection.send_recv(cmd_i)
+			error_code = "\aERR003"
+			if word==error_code:
+				break
+			if len(words)==0 or words[-1]!=word:
+				print(cmd_i, word)
+				words.append(word)
+			index+=1
+		r = "\n".join(words)
+		return r
+		
 
 class Axis:
 	def __init__(self, axis_num):

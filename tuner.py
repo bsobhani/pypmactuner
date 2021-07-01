@@ -84,7 +84,8 @@ def wait_until_in_position():
 
 
 
-axis = Axis(7)
+#axis = Axis(7)
+axis = Axis(3)
 
 def send_le_to_ivar(axis, ivar, le):
 	txt = le.text()
@@ -117,6 +118,8 @@ class Tuner(QWidget):
 		settings_button.clicked.connect(self.submit_settings)
 		step_button = QPushButton()
 		step_button.clicked.connect(self.do_step)
+		self.addIvarRow(11, "following error (fatal)")
+		self.addIvarRow(12, "following error (warning)")
 		self.addIvarRow(22, "velocity")
 		self.addIvarRow(30, "kp")
 		self.addIvarRow(31, "kd")

@@ -1,22 +1,24 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTextEdit, QLineEdit, QApplication, QDialog
-from communication import AsynRecord
+from communication import AsynRecord, Controller
+from PyQt5.QtCore import pyqtSignal
+from base import Base
 
-class Terminal(QWidget):
+class Terminal(QWidget, Base):
 	def __init__(self, parent=None):
 		super().__init__(parent)
-		self.connection = AsynRecord("XF:21IDD-CT{MC:PRV}Asyn")
+		#self.connection = AsynRecord("XF:21IDD-CT{MC:PRV}Asyn")
 		self.setLayout(QVBoxLayout())
 		self.messageBox = QTextEdit()
 		self.messageBox.setReadOnly(True)
 		self.layout().addWidget(self.messageBox)
 		self.input = QLineEdit()
-		self.input.returnPressed.connect(self.send_recv)
+		self.input.returnPressed.connect(self.submit)
 		self.layout().addWidget(self.input)
 
-	def send_recv(self):
+	def submit(self):
 		cmd = self.input.text()
-		self.connection.send(cmd)
-		self.messageBox.append(self.connection.recv())
+		r = self.send_recv(cmd)
+		self.messageBox.append(r)
 
 if __name__ == "__main__":
 	app = QApplication([])
