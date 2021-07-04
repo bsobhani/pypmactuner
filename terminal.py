@@ -17,7 +17,11 @@ class Terminal(QWidget, Base):
 
 	def submit(self):
 		cmd = self.input.text()
-		r = self.send_recv(cmd)
+		try:
+			r = self.connection.send_recv(cmd)
+		except TimeoutError:
+			self.emit_timeout_error()
+			return
 		self.messageBox.append(r)
 
 if __name__ == "__main__":

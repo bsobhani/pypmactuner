@@ -7,13 +7,15 @@ class AsynRecord:
 	def done_waiting(self, value, **kwargs):
 		self.recv_value = value
 		self.waiting_for_mine = False
-	def __init__(self, pv_name):
+	def set_pv(self, pv_name):
 		self.pv_name = pv_name
-		self.waiting_for_mine = False
 		self.send_pv_name = pv_name + ".AOUT"
 		self.send_pv = pv.PV(self.send_pv_name)
 		self.recv_pv_name = pv_name + ".AINP"
 		self.recv_pv = pv.PV(self.recv_pv_name, callback=self.done_waiting)
+	def __init__(self, pv_name):
+		self.waiting_for_mine = False
+		self.set_pv(pv_name)
 	def send(self, msg):
 		#caput(self.send_pv, msg)
 		#self.waiting_for_mine = True
@@ -33,6 +35,7 @@ class AsynRecord:
 			time.sleep(.001)
 			time_elapsed = time.time() - time_start
 			if time_elapsed > timeout:
+				AsynRecord.mutex.release()
 				raise TimeoutError
 
 	def send_recv(self, msg, timeout=10):
@@ -68,9 +71,9 @@ def compute_cs_string(cs):
 
 class Controller:
 	def __init__(self):
-		#self.connection = AsynRecord("XF:21IDD-CT{MC:PRV}Asyn")
+		self.connection = AsynRecord("XF:21IDD-CT{MC:PRV}Asyn")
 		#self.connection = AsynRecord("XF:11IDB-CT{MC:11}Asyn")
-		self.connection = AsynRecord("XF:10IDC-CT{MC:7}Asyn")
+		#self.connection = AsynRecord("XF:10IDC-CT{MC:7}Asyn")
 	
 	def get_ivar(self, ivar):
 		response = self.connection.send_recv("i"+str(ivar)+"\r")
@@ -90,6 +93,9 @@ class Controller:
 	def kill_motor(self, axis_num):
 		return self.connection.send("#{}K\r".format(axis_num))
 
+	def stop_motor(self, axis_num):
+		return self.connection.send("#{}J/\r".format(axis_num))
+
 	def get_status(self, axis_num):
 		s = self.connection.send_recv("#{}?\r".format(axis_num))
 		return int(s, 16)
@@ -99,7 +105,7 @@ class Controller:
 		return status%2==1
 
 	def list_cmd(self, prog, cs=None):
-		return self.list_cmd_method1(prog, cs)
+		return self.list_cmd_method2(prog, cs)
 
 	def list_cmd_method1(self, prog, cs):
 		cs_string = compute_cs_string(cs)
@@ -125,7 +131,6 @@ class Controller:
 		cs_string = compute_cs_string(cs)
 		cmd = "list {prog},{word},1"
 		cmd = cs_string + cmd
-		print(cmd)
 		index = 1
 		words = []
 		while True:
@@ -140,11 +145,16 @@ class Controller:
 			index+=1
 		r = "\n".join(words)
 		return r
+	
+	def getAxis(self, num):
+		return Axis(num, self)
 		
 
 class Axis:
-	def __init__(self, axis_num):
-		self.controller = Controller()
+	def __init__(self, axis_num, controller=None):
+		if controller is None:
+			controller = Controller()
+		self.controller = controller
 		self.set_axis_num(axis_num)
 
 	def set_axis_num(self, axis_num):
@@ -166,6 +176,8 @@ class Axis:
 		return self.controller.in_position(self.axis_num)
 	def kill_motor(self):
 		return self.controller.kill_motor(self.axis_num)
+	def stop_motor(self):
+		return self.controller.stop_motor(self.axis_num)
 
 
 	def get_axis_ivar(self, ivar_last_two_digits):

@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QWidget, QApplication, QVBoxLayout, QPushButton, QLi
 from PyQt5.QtCore import QTimer
 import time
 from communication import AsynRecord
+from base import Base
 
 
 app = QApplication([])
@@ -11,11 +12,14 @@ class ChangeConnection(QWidget):
 		return self.mdi.currentSubWindow().widget().connection.pv_name
 	def changeAsynPVForWindow(self, w):
 		pv = self.newPV.text()
-		w.widget().connection = AsynRecord(pv)
+		#w.widget().connection = AsynRecord(pv)
+		w.widget().connection.set_pv(pv)
+		w.widget().guiErrorBit = False
+		print("set error bit false")
 		#self.mdi.parent().statusBar().showMessage("PV set to: "+pv)
 		
 	def changeAsynPVAll(self):
-		subWindows = self.mdi.subWindowList()
+		subWindows = [x for x in self.mdi.subWindowList() if issubclass(x.widget().__class__, Base)]
 		for w in subWindows:
 			self.changeAsynPVForWindow(w)
 	
@@ -72,7 +76,19 @@ class MainWindow(QMainWindow):
 	def run_tuner(self):
 		from tuner import Tuner
 		self.tuner = Tuner()
-		self.tuner.show()
+		#self.tuner.show()
+		self.addToMdi(self.tuner)
+	def run_prog_viewer(self):
+		from progviewer import ProgViewer
+		self.progviewer = ProgViewer()
+		self.addToMdi(self.progviewer)
+
+	def run_motor_physical(self):
+		from motorphysical import MotorPhysicalSetup
+		self.motorphysical = MotorPhysicalSetup()
+		self.addToMdi(self.motorphysical)
+		
+		
 	def __init__(self, parent=None):
 		super().__init__(parent)
 		self.statusBar().showMessage("Ready")
@@ -82,18 +98,24 @@ class MainWindow(QMainWindow):
 		motorStatusAction = QAction("Motor Status", self)
 		joggerAction = QAction("Jogger", self)
 		tunerAction = QAction("Tuner", self)
+		progViewerAction = QAction("View Prog/PLC", self)
+		motorPhysicalAction = QAction("Motor Physical", self)
 		changeConnectionAction = QAction("Change connection", self)
 		terminalAction.triggered.connect(self.run_terminal)
 		iVarAction.triggered.connect(self.run_ivar)
 		motorStatusAction.triggered.connect(self.run_motorstatus)
 		joggerAction.triggered.connect(self.run_jogger)
 		tunerAction.triggered.connect(self.run_tuner)
+		progViewerAction.triggered.connect(self.run_prog_viewer)
+		motorPhysicalAction.triggered.connect(self.run_motor_physical)
 		changeConnectionAction.triggered.connect(self.run_change_connection)
 		toolsMenu.addAction(terminalAction)
 		toolsMenu.addAction(iVarAction)
 		toolsMenu.addAction(motorStatusAction)
 		toolsMenu.addAction(joggerAction)
 		toolsMenu.addAction(tunerAction)
+		toolsMenu.addAction(progViewerAction)
+		toolsMenu.addAction(motorPhysicalAction)
 		toolsMenu.addAction(changeConnectionAction)
 		self.menuBar().addMenu(toolsMenu)
 		#widget = Tuner()

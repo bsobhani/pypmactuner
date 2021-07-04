@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, QGridLayout
 from PyQt5.QtCore import QTimer
 from communication import AsynRecord, Axis
+from base import Base
 
 status_bit_names = """Motor activated
 Negative limit
@@ -71,7 +72,11 @@ class MotorStatusGrid(QWidget):
 				self.layout().addWidget(QLabel(str(bitVal)), j, 2*i+1)
 
 	def readMotor(self):
-		bits = self.axis.get_status()
+		try:
+			bits = self.axis.get_status()
+		except TimeoutError:
+			self.parent().emit_timeout_error()
+			return
 		self.updateStatusFromBits(bits)
 		
 		
@@ -81,7 +86,8 @@ class MotorStatusGrid(QWidget):
 		super().__init__(parent)
 		
 		#self.connection = AsynRecord("XF:21IDD-CT{MC:PRV}Asyn")
-		self.axis = Axis(axis_num)
+		#self.axis = Axis(axis_num)
+		self.axis = self.parent().controller.getAxis(axis_num)
 		self.setLayout(QGridLayout())
 
 class AxisSelector(QWidget):
@@ -126,17 +132,18 @@ class AxisSelector(QWidget):
 		self.axis = axis
 		self.setLayout(self.makeControlRow())
 
-class MotorStatus(QWidget):
+class MotorStatus(QWidget, Base):
 
 		
 	def doShowPage(self):
-		self.motorgrid.readMotor()
+		if not self.guiErrorBit:
+			self.motorgrid.readMotor()
 	def __init__(self, axis_num=1, parent=None):
 		super().__init__(parent)
 		self.setLayout(QVBoxLayout())
-		self.motorgrid = MotorStatusGrid(axis_num)
+		self.motorgrid = MotorStatusGrid(axis_num, self)
 		self.layout().addWidget(self.motorgrid)
-		control_row = AxisSelector(self.motorgrid.axis)
+		control_row = AxisSelector(self.motorgrid.axis, self)
 		self.layout().addWidget(control_row)
 
 		control_row.setAxis(axis_num)

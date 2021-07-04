@@ -3,6 +3,7 @@ from communication import Controller
 #from main import TextUpdate
 from functools import partial
 import time
+from base import Base
 
 class IVariableEditorRows(QWidget):
 	def clearLayout(self):
@@ -14,11 +15,19 @@ class IVariableEditorRows(QWidget):
 	def set_ivar(self, ivar, callback, ivar_monitor):
 		val = callback()
 		self.controller.set_ivar(ivar, val)
-		val = self.controller.get_ivar(ivar)
+		try:
+			val = self.controller.get_ivar(ivar)
+		except TimeoutError:
+			self.parent().emit_timeout_error()
+			return
 		ivar_monitor.setText(str(val))
 
 	def addRow(self, ivar):
-		val = self.controller.get_ivar(ivar)
+		try:
+			val = self.controller.get_ivar(ivar)
+		except TimeoutError:
+			self.parent().emit_timeout_error()
+			return
 		ivar_setter = QLineEdit()
 		layout = QHBoxLayout()
 		layout.setContentsMargins(0, 0, 0, 0)
@@ -48,14 +57,15 @@ class IVariableEditorRows(QWidget):
 	def prevPage(self):
 		self.showPage(self.starting_ivar - 10)
 		
-	def __init__(self, parent=None):
+	def __init__(self, parent):
 		super().__init__(parent)
-		self.controller = Controller()
+		#self.controller = Controller()
+		self.controller = self.parent().controller
 		self.setLayout(QVBoxLayout())
 		self.showPage(800)
 		
 
-class IVariableEditor(QWidget):
+class IVariableEditor(QWidget, Base):
 	def doShowPage(self):
 		ivar_num = int(self.jump_to_ivar.text())
 		self.ivar_rows.showPage(ivar_num)
@@ -75,7 +85,7 @@ class IVariableEditor(QWidget):
 		
 	def __init__(self, parent=None):
 		super().__init__(parent)
-		self.ivar_rows = IVariableEditorRows()
+		self.ivar_rows = IVariableEditorRows(self)
 		self.setLayout(QVBoxLayout())
 		self.layout().addWidget(self.ivar_rows)
 		control_row = self.makeControlRow()

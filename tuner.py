@@ -6,6 +6,8 @@ from functools import partial
 from PyQt5.QtCore import QTimer
 import time
 import threading
+from base import Base
+from motorstatus import AxisSelector
 
 class TextUpdate(QLabel):
 	def __init__(self, func, parent=None):
@@ -27,38 +29,51 @@ class Scope(pg.PlotWidget):
 		#self.plot([self.index], [val], pen=None, symbol='o')
 		#self.index += 1
 		self.plotArray([val])
-	def plotArray(self, array):
+	def plotArray(self, array, index=None, color="w"):
+		if index is None:
+			index = self.index
 		length = len(array)
-		end = self.index + length
-		indices = list(range(self.index, end))
-		self.plot(indices, array, pen=None, symbol='o')
+		end = index + length
+		indices = list(range(index, end))
+		#self.plot(indices, array, pen=None, symbol='o')
+		self.plot(indices, array, pen=pg.mkPen(color))
 		self.index = end
 
 class Sampler:
-	def take_sample(self):
-		sample = self.sample_callback()
-		self.data = np.append(self.data, sample)
-	def __init__(self, sample_callback, sampling_rate):
-		self.sample_callback = sample_callback
+	def take_sample(self, channel_num):
+		sample_callback = self.sample_callbacks[channel_num]
+		sample = sample_callback()
+		self.data[channel_num] = np.append(self.data[channel_num], sample)
+	def take_all_samples(self):
+		for i in range(len(self.sample_callbacks)):
+			self.take_sample(i)
+	def __init__(self, sample_callbacks, sampling_rate):
+		#self.sample_callback = sample_callback
+		self.sample_callbacks = sample_callbacks
+		self.clear()
 		self.sampling_rate = sampling_rate
-		self.data = np.array([])
 		self.running = False
 	def clear(self):
-		self.data = np.array([])
+		self.data = [np.array([]) for x in self.sample_callbacks]
 
 	def sample_chain(self):
-		self.take_sample()
+		self.take_all_samples()
 		if self.running:
 			threading.Timer(self.sampling_rate/1000, self.sample_chain).start()
+		else:
+			self.done = True
 	
 	def start(self):
 		if self.running:
 			return
 		self.running = True
+		self.done = False
 		self.clear()
 		self.sample_chain()
 	def stop(self):
 		self.running = False
+		while not self.done:
+			time.sleep(.001)
 		
 	
 
@@ -100,23 +115,29 @@ def create_ivar_row(axis, ivar, title):
 	ivar_input.returnPressed.connect(partial(send_le_to_ivar, axis, ivar, ivar_input))
 	return line
 
-class Tuner(QWidget):
+class Tuner(QWidget, Base):
 	def addIvarRow(self, ivar, title):
 		line = create_ivar_row(self.axis, ivar, title)
-		self.layout().addLayout(line)
+		self.settings_pane.addLayout(line)
 
 	def __init__(self, parent=None):
 		super().__init__(parent)
 		self.axis = axis
-		self.setLayout(QVBoxLayout())
+		self.axis_selector = AxisSelector(self.axis)
+		self.lr_layout = QHBoxLayout()
+		self.settings_pane = QVBoxLayout()
+		self.setLayout(self.lr_layout)
 		self.scope = Scope()
-		self.layout().addWidget(self.scope)
+		self.lr_layout.addWidget(self.scope)
+		self.lr_layout.addLayout(self.settings_pane)
+		self.error_area = QLabel("Error area: ")
+		self.settings_pane.addWidget(self.error_area)
 		velocity_input = QLineEdit()
 		step_size_input = QLineEdit()
 		kp_input = QLineEdit()
-		settings_button = QPushButton()
-		settings_button.clicked.connect(self.submit_settings)
-		step_button = QPushButton()
+		#settings_button = QPushButton()
+		#settings_button.clicked.connect(self.submit_settings)
+		step_button = QPushButton("Do step")
 		step_button.clicked.connect(self.do_step)
 		self.addIvarRow(11, "following error (fatal)")
 		self.addIvarRow(12, "following error (warning)")
@@ -125,18 +146,19 @@ class Tuner(QWidget):
 		self.addIvarRow(31, "kd")
 		self.addIvarRow(32, "kff")
 		self.addIvarRow(33, "ki")
-		self.layout().addWidget(settings_button)
+		#self.layout().addWidget(settings_button)
 		line = QHBoxLayout()
 		line.addWidget(QLabel("step size"))
 		line.addWidget(step_size_input)
-		self.layout().addLayout(line)
-		self.layout().addWidget(step_button)
+		self.settings_pane.addLayout(line)
+		self.settings_pane.addWidget(step_button)
+		self.settings_pane.addWidget(self.axis_selector)
 
 		self.kp_input = kp_input
 		self.velocity_input = velocity_input
 		self.step_size_input = step_size_input
 
-		self.sampler = Sampler(self.axis.get_position, .1)
+		self.sampler = Sampler([self.axis.get_position, self.axis.get_following_error], .1)
 
 	def submit_settings(self):
 		kp_val = float(self.kp_input.text())
@@ -159,7 +181,22 @@ class Tuner(QWidget):
 		wait_until_in_position()
 		#plot_until_in_position(self.scope)
 		self.sampler.stop()
-		self.scope.plotArray(self.sampler.data)
+		actual_position = self.sampler.data[0]
+		index = self.scope.index
+		self.scope.plotArray(actual_position, index)
+		following_error = self.sampler.data[1]
+		"""
+		d = len(actual_position) - len(following_error)
+		if d<0:
+			#actual_position = actual_position + np.zeros(-d)
+			actual_position.resize(len(following_error), refcheck=False)
+		else:
+			#following_error = following_error + np.zeros(d)
+			following_error.resize(len(actual_position), refcheck=False)
+		"""
+		commanded_position = actual_position + following_error
+		self.scope.plotArray(commanded_position, index, color="y")
+		self.error_area.setText("Error sum sq.: " + str(sum(following_error*following_error)))
 		print("end do step")
 
 
