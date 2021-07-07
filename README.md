@@ -7,3 +7,5 @@
 ```
 python main.py
 ```
+
+Once the main window is open, open the "Change connection" window from the Tools menu.
