@@ -28,7 +28,7 @@ class AsynRecord:
 		response = self.recv_pv.get()
 		return response
 
-	def wait_for_timeout(self, timeout):
+	def wait_for_response(self, timeout):
 		time_elapsed = 0
 		time_start = time.time()
 		while self.waiting_for_mine:
@@ -44,7 +44,7 @@ class AsynRecord:
 		#self.send(msg)
 		self.send_pv.put(msg)
 
-		self.wait_for_timeout(timeout)
+		self.wait_for_response(timeout)
 		
 		#return self.recv()
 		val = self.recv_value
@@ -71,9 +71,12 @@ def compute_cs_string(cs):
 
 class Controller:
 	def __init__(self):
-		self.connection = AsynRecord("XF:21IDD-CT{MC:PRV}Asyn")
+		#self.connection = AsynRecord("XF:21IDD-CT{MC:PRV}Asyn")
+		#self.connection = AsynRecord("XF:21IDD-CT{MC:03}Asyn")
+		self.connection = AsynRecord("asdf")
 		#self.connection = AsynRecord("XF:11IDB-CT{MC:11}Asyn")
 		#self.connection = AsynRecord("XF:10IDC-CT{MC:7}Asyn")
+		#pass
 	
 	def get_ivar(self, ivar):
 		response = self.connection.send_recv("i"+str(ivar)+"\r")

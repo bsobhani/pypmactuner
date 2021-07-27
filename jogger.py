@@ -20,6 +20,8 @@ class Jogger(QWidget, Base):
 		self.setpoint.setValue(self.getAxisPosition())
 	def getSetpoint(self):
 		return self.setpoint.value()
+	def getPosition(self):
+		return self.setpoint.value()
 	def setSetpoint(self, val):
 		self.setpoint.setValue(val)
 	def actuate(self):
@@ -31,10 +33,10 @@ class Jogger(QWidget, Base):
 
 	def moveLeft(self):
 		incr = self.increment.value()
-		self.moveToPosition(self.getSetpoint() - incr)
+		self.moveToPosition(self.getPosition() - incr)
 	def moveRight(self):
 		incr = self.increment.value()
-		self.moveToPosition(self.getSetpoint() + incr)
+		self.moveToPosition(self.getPosition() + incr)
 	def __init__(self, axis_num=1, parent=None):
 		super().__init__(parent)
 		#self.axis = Axis(axis_num)

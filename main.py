@@ -19,6 +19,7 @@ class ChangeConnection(QWidget):
 		#self.mdi.parent().statusBar().showMessage("PV set to: "+pv)
 		
 	def changeAsynPVAll(self):
+		self.mdi.parent().global_asyn_pv = self.newPV.text()
 		subWindows = [x for x in self.mdi.subWindowList() if issubclass(x.widget().__class__, Base)]
 		for w in subWindows:
 			self.changeAsynPVForWindow(w)
@@ -48,22 +49,26 @@ class MainWindow(QMainWindow):
 	def run_terminal(self):
 		from terminal import Terminal
 		self.term = Terminal()
+		self.term.connection.set_pv(self.global_asyn_pv)
 		self.term.errorSignal.connect(self.statusBar().showMessage)
 		self.addToMdi(self.term)
 		
 	def run_ivar(self):
 		from ivariableeditor import IVariableEditor
 		self.editor = IVariableEditor()
+		self.editor.connection.set_pv(self.global_asyn_pv)
 		self.addToMdi(self.editor)
 		
 	def run_motorstatus(self):
 		from motorstatus import MotorStatus
 		self.motorstatus = MotorStatus()
+		self.motorstatus.connection.set_pv(self.global_asyn_pv)
 		self.addToMdi(self.motorstatus)
 
 	def run_jogger(self):
 		from jogger import Jogger
 		self.jogger = Jogger()
+		self.jogger.connection.set_pv(self.global_asyn_pv)
 		self.addToMdi(self.jogger)
 
 
@@ -77,15 +82,18 @@ class MainWindow(QMainWindow):
 		from tuner import Tuner
 		self.tuner = Tuner()
 		#self.tuner.show()
+		self.tuner.connection.set_pv(self.global_asyn_pv)
 		self.addToMdi(self.tuner)
 	def run_prog_viewer(self):
 		from progviewer import ProgViewer
 		self.progviewer = ProgViewer()
+		self.progviewer.connection.set_pv(self.global_asyn_pv)
 		self.addToMdi(self.progviewer)
 
 	def run_motor_physical(self):
 		from motorphysical import MotorPhysicalSetup
 		self.motorphysical = MotorPhysicalSetup()
+		self.motorphysical.connection.set_pv(self.global_asyn_pv)
 		self.addToMdi(self.motorphysical)
 		
 		
@@ -121,6 +129,7 @@ class MainWindow(QMainWindow):
 		#widget = Tuner()
 		self.mdi = QMdiArea()
 		self.setCentralWidget(self.mdi)
+		self.global_asyn_pv = "XF:21IDD-CT{MC:03}Asyn"
 
 	
 
