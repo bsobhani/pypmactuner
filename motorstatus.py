@@ -162,6 +162,7 @@ class MotorStatus(QWidget, Base):
 if __name__ == "__main__":
 	app = QApplication([])
 	motorstatus = MotorStatus()
+	motorstatus.controller.set_pmac_socket("192.168.11.21", 1025)
 	#motorstatus.updateStatusFromBits(hexstring_to_int("E40044000001"))
 	motorstatus.show()
 	app.exec()

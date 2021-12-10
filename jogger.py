@@ -73,11 +73,15 @@ class Jogger(QWidget, Base):
 		self.timer.setInterval(1500)
 		self.timer.timeout.connect(self.updatePosition)
 		self.timer.start()
-		self.syncSetpoint()
+		try:
+			self.syncSetpoint()
+		except:
+			None
 		
 	
 if __name__ == "__main__":
 	app = QApplication([])
 	jogger = Jogger(axis_num=8)
+	jogger.controller.set_pmac_socket("192.168.11.21", 1025)
 	jogger.show()
 	app.exec()

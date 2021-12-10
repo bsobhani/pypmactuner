@@ -2,6 +2,32 @@ from epics import caget, caput, pv
 import time
 from threading import Lock
 
+from dls_pmaclib.dls_pmacremote import PmacEthernetInterface
+
+class NullSocket:
+	def send_recv(self, cmd):
+		return "null socket"
+	def send(self, cmd):
+		self.send_recv(cmd)
+
+class PmacSocket:
+	def __init__(self, host, port):
+		pei = PmacEthernetInterface()
+		pei.hostname = host
+		pei.port = port
+		pei.connect()
+		self.pei = pei
+
+	def send_recv_raw(self, cmd):
+		return self.pei._sendCommand(cmd)
+	def send_recv(self, cmd):
+		return self.send_recv_raw(cmd).split("\r")[0]
+	def send(self, cmd):
+		self.send_recv(cmd)
+
+
+
+
 class AsynRecord:
 	mutex = Lock()
 	def done_waiting(self, value, **kwargs):
@@ -70,13 +96,23 @@ def compute_cs_string(cs):
 	return cs_string
 
 class Controller:
+	def set_connection(self, conn):
+		self.connection = conn
+	def set_pmac_socket(self, host, port):
+		self.set_connection(PmacSocket(host, port))
+		
+	def set_asyn_record(self, pv):
+		self.set_connection(AsynRecord(pv))
+		
 	def __init__(self):
 		#self.connection = AsynRecord("XF:21IDD-CT{MC:PRV}Asyn")
 		#self.connection = AsynRecord("XF:21IDD-CT{MC:03}Asyn")
-		self.connection = AsynRecord("asdf")
+		#self.connection = AsynRecord("asdf")
+		#self.connection = AsynRecord("XF:10IDC-CT{MC:7}Asyn")
 		#self.connection = AsynRecord("XF:11IDB-CT{MC:11}Asyn")
 		#self.connection = AsynRecord("XF:10IDC-CT{MC:7}Asyn")
-		#pass
+		#self.connection = connection
+		pass
 	
 	def get_ivar(self, ivar):
 		response = self.connection.send_recv("i"+str(ivar)+"\r")
@@ -87,11 +123,18 @@ class Controller:
 		self.connection.send("#"+str(axis_num)+"j="+str(pos)+"\r")
 	def get_position(self, axis_num):
 		response = self.connection.send_recv("#"+str(axis_num) +"p\r")
-		val = float(response)
+		try:
+			val = float(response)
+		except ValueError:
+			val = 0
 		return val
 
 	def get_following_error(self, axis_num):
-		return float(self.connection.send_recv("#{}F\r".format(axis_num)))
+		try:
+			val = float(self.connection.send_recv("#{}F\r".format(axis_num)))
+		except:
+			val = 0
+		return 0
 
 	def kill_motor(self, axis_num):
 		return self.connection.send("#{}K\r".format(axis_num))
@@ -101,8 +144,11 @@ class Controller:
 
 	def get_status(self, axis_num):
 		s = self.connection.send_recv("#{}?\r".format(axis_num))
-		return int(s, 16)
-
+		try:
+			i = int(s, 16)
+		except ValueError:
+			i = 0
+		return i
 	def in_position(self, axis_num):
 		status = self.get_status(axis_num)
 		return status%2==1

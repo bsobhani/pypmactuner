@@ -62,7 +62,10 @@ class IVariableEditorRows(QWidget):
 		#self.controller = Controller()
 		self.controller = self.parent().controller
 		self.setLayout(QVBoxLayout())
-		self.showPage(800)
+		try:
+			self.showPage(800)
+		except:
+			None
 		
 
 class IVariableEditor(QWidget, Base):
@@ -94,5 +97,6 @@ class IVariableEditor(QWidget, Base):
 if __name__ == "__main__":
 	app = QApplication([])
 	widget = IVariableEditor()
+	widget.controller.set_pmac_socket("192.168.11.21", 1025)
 	widget.show()
 	app.exec()

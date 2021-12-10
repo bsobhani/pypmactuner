@@ -289,5 +289,6 @@ class Tuner(QWidget, Base):
 if __name__ == "__main__":
 	app = QApplication([])
 	tuner = Tuner()
+	tuner.axis.controller.set_pmac_socket("192.168.11.21", 1025)
 	tuner.show()
 	app.exec()

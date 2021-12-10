@@ -18,7 +18,7 @@ class Terminal(QWidget, Base):
 	def submit(self):
 		cmd = self.input.text()
 		try:
-			r = self.connection.send_recv(cmd)
+			r = self.controller.connection.send_recv(cmd)
 		except TimeoutError:
 			self.emit_timeout_error()
 			return
@@ -27,6 +27,8 @@ class Terminal(QWidget, Base):
 if __name__ == "__main__":
 	app = QApplication([])
 	terminal = Terminal()
+	#terminal.controller.set_pmac_socket("192.168.11.21", 1025)
+	terminal.controller.set_pmac_socket(None, None)
 	terminal.show()
 	app.exec()
 

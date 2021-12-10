@@ -6,15 +6,24 @@ from motorstatus import AxisSelector
 from base import Base
 
 def max_current_cb(axis):
-	i01 = float(axis.get_axis_ivar(1))
-	i69 = float(axis.get_axis_ivar(69))
-	i77 = float(axis.get_axis_ivar(77))
+	try:
+		i01 = float(axis.get_axis_ivar(1))
+		i69 = float(axis.get_axis_ivar(69))
+		i77 = float(axis.get_axis_ivar(77))
+	except ValueError:
+		i01 = 1
+		i69 = 1
+		i77 = 1
 	return "Max current: sqrt(Ixx01*Ixx69^2 + Ixx77^2) = " + str((i01*i69**2 + i77**2)**.5)
 
 
 def gear_ratio_cb(axis):
-	i07 = float(axis.get_axis_ivar(7))
-	i08 = float(axis.get_axis_ivar(8))
+	try:
+		i07 = float(axis.get_axis_ivar(7))
+		i08 = float(axis.get_axis_ivar(8))
+	except ValueError:
+		i07 = 1
+		i08 = 1
 	return "Gear ratio: Ixx07/Ixx08 = " + str(i07/i08)
 
 class MotorPhysicalSetup(QWidget, Base):
@@ -42,5 +51,6 @@ class MotorPhysicalSetup(QWidget, Base):
 if __name__ == "__main__":
 	app = QApplication([])
 	widget = MotorPhysicalSetup()
+	widget.controller.set_pmac_socket("192.168.11.21", 1025)
 	widget.show()
 	app.exec()

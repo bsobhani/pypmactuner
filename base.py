@@ -9,5 +9,5 @@ class Base:
 	def __init__(self, **kwargs):
 		self.guiErrorBit = False
 		self.controller = Controller()
-		self.connection = self.controller.connection
+		#self.connection = self.controller.connection
 	
