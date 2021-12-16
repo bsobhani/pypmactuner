@@ -19,8 +19,16 @@ class PmacSocket:
 		self.pei = pei
 
 	def send_recv_raw(self, cmd):
+		#print(cmd)
+		#return "asdf"
+		#cmd = bytes(cmd, encoding="ascii")
 		return self.pei._sendCommand(cmd)
 	def send_recv(self, cmd):
+		#b = [ord(c) for c in cmd]
+		#print(max(b), min(b), len(cmd))
+		time.sleep(.1)
+		#if max(b)>255:
+		#	print([(cmd[i], b[i]) for i in range(len(cmd))])
 		return self.send_recv_raw(cmd).split("\r")[0]
 	def send(self, cmd):
 		self.send_recv(cmd)

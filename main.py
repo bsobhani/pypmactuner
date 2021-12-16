@@ -125,6 +125,12 @@ class MainWindow(QMainWindow):
 		#self.editor.connection.set_pv(self.global_asyn_pv)
 		self.updateConnection(self.editor)
 		self.addToMdi(self.editor)
+
+	def run_code_runner(self):
+		from code_runner import CodeRunner
+		self.code_runner = CodeRunner()
+		self.updateConnection(self.code_runner)
+		self.addToMdi(self.code_runner)
 		
 	def run_motorstatus(self):
 		from motorstatus import MotorStatus
@@ -180,6 +186,7 @@ class MainWindow(QMainWindow):
 		tunerAction = QAction("Tuner", self)
 		progViewerAction = QAction("View Prog/PLC", self)
 		motorPhysicalAction = QAction("Motor Physical", self)
+		codeRunnerAction = QAction("Code Runner", self)
 		changeConnectionAction = QAction("Change connection", self)
 		terminalAction.triggered.connect(self.run_terminal)
 		iVarAction.triggered.connect(self.run_ivar)
@@ -187,6 +194,7 @@ class MainWindow(QMainWindow):
 		joggerAction.triggered.connect(self.run_jogger)
 		tunerAction.triggered.connect(self.run_tuner)
 		progViewerAction.triggered.connect(self.run_prog_viewer)
+		codeRunnerAction.triggered.connect(self.run_code_runner)
 		motorPhysicalAction.triggered.connect(self.run_motor_physical)
 		changeConnectionAction.triggered.connect(self.run_change_connection)
 		toolsMenu.addAction(terminalAction)
@@ -195,6 +203,7 @@ class MainWindow(QMainWindow):
 		toolsMenu.addAction(joggerAction)
 		toolsMenu.addAction(tunerAction)
 		toolsMenu.addAction(progViewerAction)
+		toolsMenu.addAction(codeRunnerAction)
 		toolsMenu.addAction(motorPhysicalAction)
 		toolsMenu.addAction(changeConnectionAction)
 		self.menuBar().addMenu(toolsMenu)
